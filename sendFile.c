@@ -1,11 +1,12 @@
 #include "protocol.h"
 
+//File includes code taken from TCPserver.c and Beej's Guide to Network Programming 
+
 int main(int argc, char *argv[])
 {
     int bufSize = DEFAULT_BUFFER;
     struct sockaddr_in dest;
-    struct addrinfo hints;
-    struct addrinfo *res;
+    struct addrinfo hints, *res;
     char * fileName;
     int error;
     char * tempArg;
@@ -14,6 +15,8 @@ int main(int argc, char *argv[])
     char * received;
     int rLength;
     char * readBuffer;
+    int mysocket;
+    char * confirm = CONFIRMATION_MSG;
 
     if (argc == 3 || argc == 4) {
         fileName = argv[1];
@@ -23,7 +26,8 @@ int main(int argc, char *argv[])
             exit(-1);
         }
 
-        dest.sin_family = AF_INET; // Use the IPv4 address family
+        //Code taken from TCPserver.c
+        dest.sin_family = AF_INET; 
         
         strcpy(tempArg, argv[2]);
         char * token = strtok(tempArg,":");
@@ -40,22 +44,17 @@ int main(int argc, char *argv[])
         }
 
         strcpy(port,token);
-        /*
-        Figures this out later for 2%
+
+        //Code obtained from Beej's Guide to Network Programming
+        memset(&hints, 0, sizeof hints);
+        hints.ai_family = AF_UNSPEC;  // use IPv4 or IPv6, whichever
+        hints.ai_socktype = SOCK_STREAM;
+
         error = getaddrinfo(address,port,&hints,&res);
         if (error != 0) {
             fprintf(stderr, "%s: %s\n", address, gai_strerror(error));
             exit(-1);
-        }
-        
-        if (res->ai_addr->sa_family == AF_INET) {
-            struct sockaddr_in *p = (struct sockaddr_in *)res->ai_addr;
-            printf("%s\n", inet_ntop(AF_INET, &p->sin_addr, str, sizeof(str)));
-        } else if (i->ai_addr->sa_family == AF_INET6) {
-            struct sockaddr_in6 *p = (struct sockaddr_in6 *)res->ai_addr;
-            printf("%s\n", inet_ntop(AF_INET6, &p->sin6_addr, str, sizeof(str)));
-        }
-        */
+        }        
         
         inet_aton(address, &dest.sin_addr);
         dest.sin_port = htons(atoi(port));
@@ -68,12 +67,19 @@ int main(int argc, char *argv[])
         exit(-1);
     }
 
-    int mysocket = socket(dest.sin_family, SOCK_STREAM, 0);
+    mysocket = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
 
+    //Code taken from TCPserver.c
     // Connect to the server
 	error = connect(mysocket, (struct sockaddr *)&dest, sizeof(struct sockaddr_in));
     if (error != 0) {
         fprintf(stderr,"Error Connecting to Server: %s\n",strerror(errno));
+        close(mysocket);
+        exit(-1);
+    }
+
+    if (strlen(fileName) > bufSize) {
+        fprintf(stderr,"Error: File name %s longer than buffer size of: %d\n",fileName,bufSize);
         close(mysocket);
         exit(-1);
     }
@@ -87,26 +93,29 @@ int main(int argc, char *argv[])
         exit(-1);
     }
 
-    fseek(fptr, 0, SEEK_END);
-    int file_size = ftell(fptr);
-    fseek(fptr, 0, SEEK_SET);
-    char * initialMessage = malloc(bufSize*sizeof(char));
-    if (bufSize < snprintf(initialMessage, bufSize,"%s %d\n",fileName,file_size)) {
-        fprintf(stderr,"Error: File name %s and length too large for buffer length %d\n",fileName,bufSize);
-        free (initialMessage);
+    received = malloc(bufSize*sizeof(char)+1);
+
+    // Send initial message
+    send(mysocket, fileName, strlen(fileName), 0);
+
+    rLength = recv(mysocket, received, bufSize, 0);
+    received[rLength] = '\0';
+
+    if (rLength == -1) {
+        fprintf(stderr,"Error: File name transmission failed: %s\n",strerror(errno));
         fclose(fptr);
+        free(received);
+        free(readBuffer);
+        close(mysocket);
+        exit(-1);
+    } else if (strcmp(fileName,received) != 0) {
+        fprintf(stderr,"Error: File name transmission failed, received back \"%s\" from server instead of %s\n",received,fileName);
+        fclose(fptr);
+        free(received);
+        free(readBuffer);
         close(mysocket);
         exit(-1);
     }
-
-    // Send initial message
-    send(mysocket, initialMessage, strlen(initialMessage), 0); 
-    free(initialMessage);
-
-    received = malloc(bufSize*sizeof(char)+1);
-    // Confirm message was recieved
-	rLength = recv(mysocket, received, bufSize, 0);
-    received[rLength] = '\0';
 
     /* Put error check here*/
 
@@ -116,13 +125,16 @@ int main(int argc, char *argv[])
     }
 
 
-    
-
     rLength = recv(mysocket, received, bufSize, 0);
     received[rLength] = '\0';
 
+    if (strcmp(received,confirm) == 0) {
+        printf("File transmitted successfully\n");
+    }
+
     /* Put error check here*/
     fclose(fptr);
+    free(received);
     free(readBuffer);
     close(mysocket);
 }

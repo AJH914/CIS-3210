@@ -14,8 +14,10 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#include <math.h> 
 
 #define DEFAULT_BUFFER 4096
+#define CONFIRMATION_MSG "@"
 
 
 

@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "*.html": "html",
-        "protocol.h": "c"
+        "protocol.h": "c",
+        "math.h": "c"
     }
 }
