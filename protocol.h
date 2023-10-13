@@ -18,5 +18,8 @@
 
 #define DEFAULT_BUFFER 4096
 #define CONFIRMATION_MSG "@"
+#define MAX_FILE_LENGTH 256
+#define MAX_PORT 6
+#define MAX_ADDRESS 50
 
 #endif

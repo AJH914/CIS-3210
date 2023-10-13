@@ -2,8 +2,6 @@
 
 //File includes code taken from TCPserver.c and Beej's Guide to Network Programming 
 
-#define PORTNUM 50940
-
 //Code taken from TCPserver.c
 int mysocket;            // socket used to listen for incoming connections
 int consocket;
@@ -20,7 +18,8 @@ static void sigintCatcher(int signal,  siginfo_t* si, void *arg)
 int main(int argc, char *argv[])
 {
     int bufSize = DEFAULT_BUFFER;
-    char * port;
+    int status;
+    char port[MAX_PORT];
     int len;
     unsigned long fileSize;
     unsigned long chunks;
@@ -30,21 +29,22 @@ int main(int argc, char *argv[])
 
     //Code taken from TCPserver.c
     struct sockaddr_in dest; // socket info about the machine connecting to us
-	struct sockaddr_in serv; // socket info about our server
     struct sigaction signaler;
 
-    struct addrinfo hints, *res;
+    struct addrinfo hints, *res,*p;
+    char ipstr[INET6_ADDRSTRLEN];
     
 
     socklen_t socksize = sizeof(struct sockaddr_in);
 
     if (argc == 2 || argc == 3) {
-        port = argv[2];
+        strcpy(port,argv[1]);
         if (argc == 3) {
             bufSize = atoi(argv[2]);
         }
     } else {
         printf("Invalid argument format. Input should be formatted as  $./server port-number bufSize \n");
+        freeaddrinfo(res);
         exit(-1);
     }    
 
@@ -55,29 +55,69 @@ int main(int argc, char *argv[])
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_UNSPEC;  // use IPv4 or IPv6, whichever
     hints.ai_socktype = SOCK_STREAM;
-    hints.ai_flags = AI_PASSIVE;     // fill in my IP for me
-    getaddrinfo(NULL, port, &hints, &res);
+    //hints.ai_flags = AI_PASSIVE;     // fill in my IP for me
+    status = getaddrinfo(NULL, port, &hints, &res);
+    if (status != 0) {
+        fprintf(stderr, "getaddrinfo error: %s\n", gai_strerror(status));
+        exit(-1);
+    }
 
     mysocket = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
 
-    /*
-    memset(&serv, 0, sizeof(serv));           // zero the struct before filling the fields
-	serv.sin_family = AF_INET;                // Use the IPv4 address family
-	serv.sin_addr.s_addr = htonl(INADDR_ANY); // Set our address to any interface
-    serv.sin_port = htons(atoi(port));        // Set the server port number 
-    mysocket = socket(AF_INET, SOCK_STREAM, 0);
-    */
-
 
     //Code taken from TCPserver.c
-    if (bind(mysocket, (struct sockaddr *)&serv, sizeof(struct sockaddr)) != 0){
-		printf("Unable to open TCP socket on localhost:%d\n", PORTNUM);
-		printf("%s\n", strerror(errno));
+    if (bind(mysocket, res->ai_addr, res->ai_addrlen) != 0){
+		fprintf(stderr,"Unable to open TCP socket on:\n");
+        for(p = res;p != NULL; p = p->ai_next) {
+            void *addr;
+            char *ipver;
+            // get the pointer to the address itself,
+            // different fields in IPv4 and IPv6:
+            if (p->ai_family == AF_INET) { // IPv4
+                struct sockaddr_in *ipv4 = (struct sockaddr_in *)p->ai_addr;
+                addr = &(ipv4->sin_addr);
+                ipver = "IPv4";
+            } else { // IPv6
+                struct sockaddr_in6 *ipv6 = (struct sockaddr_in6 *)p->ai_addr;
+                addr = &(ipv6->sin6_addr);
+                ipver = "IPv6";
+            }
+            // convert the IP to a string and print it:
+            inet_ntop(p->ai_family, addr, ipstr, sizeof ipstr);
+            fprintf(stderr,"  %s: %s\n", ipver, ipstr);
+        }
+		fprintf(stderr,"%s\n", strerror(errno));
+        freeaddrinfo(res);
 		close(mysocket);
 		exit(-1);
 	}
+    
+    //Code from beej's for printing IP
+    for(p = res;p != NULL; p = p->ai_next) {
+		void *addr;
+		char *ipver;
+		// get the pointer to the address itself,
+		// different fields in IPv4 and IPv6:
+		if (p->ai_family == AF_INET) { // IPv4
+			struct sockaddr_in *ipv4 = (struct sockaddr_in *)p->ai_addr;
+			addr = &(ipv4->sin_addr);
+			ipver = "IPv4";
+		} else { // IPv6
+			struct sockaddr_in6 *ipv6 = (struct sockaddr_in6 *)p->ai_addr;
+			addr = &(ipv6->sin6_addr);
+			ipver = "IPv6";
+		}
+		// convert the IP to a string and print it:
+		inet_ntop(p->ai_family, addr, ipstr, sizeof ipstr);
+		printf("  %s: %s\n", ipver, ipstr);
+	}
 
-    listen(mysocket, 0);
+    if (listen(mysocket, 0) == -1) {
+        fprintf(stderr,"Error: Listen failed: %s\n", strerror(errno));
+        freeaddrinfo(res);
+		close(mysocket);
+		exit(-1);
+    }
     consocket = accept(mysocket, (struct sockaddr *)&dest, &socksize);
 
 
@@ -96,6 +136,7 @@ int main(int argc, char *argv[])
             fprintf(stderr,"Error: File name transmission failed: %s\n",strerror(errno));
             free(fileName);
             free(textReceived);
+            freeaddrinfo(res);
             close(consocket);
             close(mysocket);
             exit(-1); 
@@ -116,6 +157,7 @@ int main(int argc, char *argv[])
             fprintf(stderr,"Error: File %s failed to open: %s\n",fileName,strerror(errno));
             free(fileName);
             free(textReceived);
+            freeaddrinfo(res);
             close(consocket);
             close(mysocket);
             exit(-1);
@@ -134,6 +176,7 @@ int main(int argc, char *argv[])
                 fprintf(stderr,"Error: File name transmission failed: %s\n",strerror(errno));
                 free(fileName);
                 free(textReceived);
+                freeaddrinfo(res);
                 close(consocket);
                 close(mysocket);
                 fclose(fptr);
@@ -162,6 +205,7 @@ int main(int argc, char *argv[])
 
     free(fileName);
     free(textReceived);
+    freeaddrinfo(res);
     close(mysocket);
 }
 
