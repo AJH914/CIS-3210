@@ -19,6 +19,4 @@
 #define DEFAULT_BUFFER 4096
 #define CONFIRMATION_MSG "@"
 
-
-
 #endif

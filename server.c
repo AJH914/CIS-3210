@@ -22,14 +22,10 @@ int main(int argc, char *argv[])
     int bufSize = DEFAULT_BUFFER;
     char * port;
     int len;
-
-    char * textReceived;
     unsigned long fileSize;
     unsigned long chunks;
     int recievingFlag = 0;
     char * confirm = CONFIRMATION_MSG;
-
-    char * fileName;
     FILE * fptr;
 
     //Code taken from TCPserver.c
@@ -110,7 +106,7 @@ int main(int argc, char *argv[])
 
         send(consocket, fileName, strlen(fileName), 0); 
         //Code taken from TCPserver.c
-        printf("Receiving %s from %d on port %d\n",fileName,inet_ntoa(dest.sin_addr), ntohs(dest.sin_port));
+        printf("Receiving %s from %s on port %d\n",fileName,inet_ntoa(dest.sin_addr), ntohs(dest.sin_port));
 
 
         //Receive file from clients
@@ -155,8 +151,8 @@ int main(int argc, char *argv[])
         fseek(fptr, 0, SEEK_SET);
         fclose(fptr);
         fptr = NULL;
-        printf("Recieved %s from %d on port %d\n",fileName,inet_ntoa(dest.sin_addr), ntohs(dest.sin_port));
-        printf("%s contains %d bytes, received in %d chunks\n",fileName,fileSize,chunks);
+        printf("Recieved %s from %s on port %d\n",fileName,inet_ntoa(dest.sin_addr), ntohs(dest.sin_port));
+        printf("%s contains %lu bytes, received in %lu chunks\n",fileName,fileSize,chunks);
 		//Send data to client
 		send(consocket, confirm, strlen(confirm), 0); 
 		
@@ -168,3 +164,4 @@ int main(int argc, char *argv[])
     free(textReceived);
     close(mysocket);
 }
+
