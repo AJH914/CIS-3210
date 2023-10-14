@@ -39,7 +39,23 @@ int main(int argc, char *argv[])
         exit(-1);
     }    
 
+    //Find my IP
+    struct ifaddrs * ifad;
 
+    getifaddrs(&ifad);
+    struct ifaddrs * tmp = ifad;
+    char address[MAX_ADDRESS];
+    while (tmp) 
+    {
+        if (tmp->ifa_addr && tmp->ifa_addr->sa_family == AF_INET)
+        {
+            struct sockaddr_in *pAddr = (struct sockaddr_in *)tmp->ifa_addr;
+            if (strcmp(inet_ntoa(pAddr->sin_addr),"127.0.0.1") != 0){
+                strcpy(address,inet_ntoa(pAddr->sin_addr));
+            }
+        }
+        tmp = tmp->ifa_next;
+    }
     // Add error checking
     //Code obtained from Beej's Guide to Network Programming
 
@@ -47,7 +63,7 @@ int main(int argc, char *argv[])
     hints.ai_family = AF_INET;  // use IPv4 or IPv6, whichever
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE;     // fill in my IP for me
-    status = getaddrinfo(NULL, port, &hints, &res);
+    status = getaddrinfo(address, port, &hints, &res);
     if (status != 0) {
         fprintf(stderr, "getaddrinfo error: %s\n", gai_strerror(status));
         exit(-1);
@@ -170,7 +186,7 @@ int main(int argc, char *argv[])
 		close(consocket);
 		consocket = accept(mysocket, (struct sockaddr *)&dest, &socksize);
 	}
-
+    
     free(fileName);
     free(textReceived);
     freeaddrinfo(res);

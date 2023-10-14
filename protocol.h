@@ -14,6 +14,7 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <math.h> 
+#include <ifaddrs.h>
 
 #define DEFAULT_BUFFER 4096
 #define CONFIRMATION_MSG "@"
