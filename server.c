@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;  // use IPv4 or IPv6, whichever
     hints.ai_socktype = SOCK_STREAM;
-    //hints.ai_flags = AI_PASSIVE;     // fill in my IP for me
+    hints.ai_flags = AI_PASSIVE;     // fill in my IP for me
     status = getaddrinfo(NULL, port, &hints, &res);
     if (status != 0) {
         fprintf(stderr, "getaddrinfo error: %s\n", gai_strerror(status));
@@ -118,7 +118,6 @@ int main(int argc, char *argv[])
         send(consocket, fileName, strlen(fileName), 0); 
         //Code taken from TCPserver.c
         printf("Receiving %s from %s on port %d\n",fileName,inet_ntoa(dest.sin_addr), ntohs(dest.sin_port));
-
 
         //Receive file from clients
         
