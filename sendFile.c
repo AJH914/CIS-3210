@@ -47,11 +47,11 @@ int main(int argc, char *argv[])
         strcpy(port,token);
         //Code obtained from Beej's Guide to Network Programming
         memset(&hints, 0, sizeof hints);
-        hints.ai_family = AF_UNSPEC;  // use IPv4 or IPv6, whichever
+        hints.ai_family = AF_INET;  // use IPv4 or IPv6, whichever
         hints.ai_socktype = SOCK_STREAM;
         error = getaddrinfo(address,port,&hints,&res);
         if (error != 0) {
-            fprintf(stderr, "Error: %s\n", gai_strerror(error));
+            fprintf(stderr, "getaddrinfo error: %s\n", gai_strerror(error));
             exit(-1);
         }        
         
@@ -85,7 +85,6 @@ int main(int argc, char *argv[])
     }
 
     received = malloc(bufSize*sizeof(char)+1);
-    printf("Send initial\n");
     // Send initial message
     bytesSent = send(mysocket, fileName, strlen(fileName), 0);
     if (bytesSent == -1) {
@@ -97,10 +96,10 @@ int main(int argc, char *argv[])
     }
 
 
-    printf("Sent initial\n");
+    
     rLength = recv(mysocket, received, bufSize, 0);
     received[rLength] = '\0';
-    printf("Recieved\n");
+    printf("%s\n",received);
     if (rLength == -1) {
         fprintf(stderr,"Error: Failed to hear back from server: %s\n",strerror(errno));
         fclose(fptr);
@@ -119,6 +118,7 @@ int main(int argc, char *argv[])
 
     readBuffer = malloc(bufSize*sizeof(char));
     while (fread(readBuffer, bufSize, sizeof(char), fptr) != sizeof(char)) {
+        printf("%s\n",readBuffer);
         send(mysocket, readBuffer, strlen(readBuffer), 0);  
     }
 

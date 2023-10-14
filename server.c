@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
     //Code obtained from Beej's Guide to Network Programming
 
     memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_UNSPEC;  // use IPv4 or IPv6, whichever
+    hints.ai_family = AF_INET;  // use IPv4 or IPv6, whichever
     hints.ai_socktype = SOCK_STREAM;
     //hints.ai_flags = AI_PASSIVE;     // fill in my IP for me
     status = getaddrinfo(NULL, port, &hints, &res);
