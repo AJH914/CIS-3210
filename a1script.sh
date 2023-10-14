@@ -1,10 +1,8 @@
-NUM_OF_CLIENTS=5
-FILENAME="testfile.txt"
-SERVER_IP=""
-SERVER_PORT=""
+FILENAME_ARRAY=("wonderland.txt" "bee-movie.txt" "LoremIpsum.txt" "nudibranch.txt")
+SERVER_IP="172.31.97.94"
+SERVER_PORT="8080"
 
-
-for ((i = 1; i <= NUM_CLIENTS; i++)); do
-    ./sendFile $FILENAME $SERVER_IP:$SERVER_PORT $BUFFERSIZE
-    sleep 1
+for i in ${FILENAME_ARRAY[@]}
+do
+    ./sendFile $i $SERVER_IP:$SERVER_PORT $BUFFERSIZE
 done
