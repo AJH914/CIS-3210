@@ -5,7 +5,6 @@
 int main(int argc, char *argv[])
 {
     int bufSize = DEFAULT_BUFFER;
-    struct sockaddr_in dest;
     struct addrinfo hints, *res;
     char fileName[MAX_FILE_LENGTH];
     int error;
@@ -32,7 +31,6 @@ int main(int argc, char *argv[])
         }
 
         //Code taken from TCPserver.c
-        dest.sin_family = AF_UNSPEC; 
         strcpy(tempArg, argv[2]);
         char * token = strtok(tempArg,":");
         if (token == NULL) {
@@ -56,8 +54,6 @@ int main(int argc, char *argv[])
             fprintf(stderr, "Error: %s\n", gai_strerror(error));
             exit(-1);
         }        
-        inet_aton(address, &dest.sin_addr);
-        dest.sin_port = htons(atoi(port));
         
     } else {
         printf("Invalid argument format. Input should be formatted as  $./sendFile fileName server-IP-address:port-number bufSize. \n");
@@ -66,7 +62,7 @@ int main(int argc, char *argv[])
     mysocket = socket(res->ai_family, res->ai_socktype, res->ai_protocol);;
     //Code taken from TCPserver.c
     // Connect to the server
-	error = connect(mysocket, (struct sockaddr *)&dest, sizeof(struct sockaddr_in));
+	error = connect(mysocket, res->ai_addr, res->ai_addrlen);
     if (error != 0) {
         fprintf(stderr,"Error Connecting to Server: %s\n",strerror(errno));
         close(mysocket);

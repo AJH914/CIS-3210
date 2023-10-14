@@ -6,15 +6,6 @@
 int mysocket;            // socket used to listen for incoming connections
 int consocket;
 
-static void sigintCatcher(int signal,  siginfo_t* si, void *arg)
-{
-    printf("\n\n************** Caught SIG_INT: shutting down the server ********************\n");
-
-	close(consocket);
-	close(mysocket);
-	exit(-1);
-}
-
 int main(int argc, char *argv[])
 {
     int bufSize = DEFAULT_BUFFER;
@@ -26,7 +17,6 @@ int main(int argc, char *argv[])
     int recievingFlag = 0;
     char * confirm = CONFIRMATION_MSG;
     FILE * fptr;
-
     //Code taken from TCPserver.c
     struct sockaddr_in dest; // socket info about the machine connecting to us
     struct sigaction signaler;
@@ -64,6 +54,15 @@ int main(int argc, char *argv[])
 
     mysocket = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
 
+    int flag=1;
+    //Check if Address is in use
+	if (setsockopt(mysocket,SOL_SOCKET,SO_REUSEADDR,&flag,sizeof(flag)) == -1) {
+    	printf("setsockopt() failed\n");
+		printf("%s\n", strerror(errno));
+        freeaddrinfo(res);
+		close(mysocket);
+    	exit(-1);
+	} 
 
     //Code taken from TCPserver.c
     if (bind(mysocket, res->ai_addr, res->ai_addrlen) != 0){
@@ -93,6 +92,7 @@ int main(int argc, char *argv[])
 	}
     
     //Code from beej's for printing IP
+    printf("Server is running at \n");
     for(p = res;p != NULL; p = p->ai_next) {
 		void *addr;
 		char *ipver;
@@ -109,8 +109,9 @@ int main(int argc, char *argv[])
 		}
 		// convert the IP to a string and print it:
 		inet_ntop(p->ai_family, addr, ipstr, sizeof ipstr);
-		printf("  %s: %s\n", ipver, ipstr);
+		printf("  %s: %s:\n", ipver, ipstr);
 	}
+    printf("On port %s\n",port);
 
     if (listen(mysocket, 0) == -1) {
         fprintf(stderr,"Error: Listen failed: %s\n", strerror(errno));
