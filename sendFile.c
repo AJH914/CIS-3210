@@ -17,6 +17,7 @@ int main(int argc, char *argv[])
     int mysocket;
     char * confirm = CONFIRMATION_MSG;
     int bytesSent = 0;
+    int bytesRead = 0;
 
     if (argc == 3 || argc == 4) {
         //Initialize the destination socket information
@@ -99,7 +100,7 @@ int main(int argc, char *argv[])
     
     rLength = recv(mysocket, received, bufSize, 0);
     received[rLength] = '\0';
-    printf("%s\n",received);
+
     if (rLength == -1) {
         fprintf(stderr,"Error: Failed to hear back from server: %s\n",strerror(errno));
         fclose(fptr);
@@ -113,23 +114,34 @@ int main(int argc, char *argv[])
         close(mysocket);
         exit(-1);
     }
-
     /* Put error check here*/
 
     readBuffer = malloc(bufSize*sizeof(char));
-    while (fread(readBuffer, bufSize, sizeof(char), fptr) != sizeof(char)) {
-        printf("%s\n",readBuffer);
-        send(mysocket, readBuffer, strlen(readBuffer), 0);  
+    bytesRead = 1;
+    while (!feof(fptr)){
+        bytesRead = fread(readBuffer, sizeof(char), bufSize, fptr);
+        if (ferror(fptr)) {
+            printf("Error in reading from file : %s\n",fileName);
+            fclose(fptr);
+            free(received);
+            free(readBuffer);
+            close(mysocket);
+            exit(-1);
+            break;
+        }
+        readBuffer[bytesRead] = '\0';
+        bytesSent = send(mysocket, readBuffer, strlen(readBuffer), 0);
+        if (bytesSent == -1) {
+            fprintf(stderr,"Error: File name transmission failed: %s\n",strerror(errno));
+            fclose(fptr);
+            free(received);
+            free(readBuffer);
+            close(mysocket);
+            exit(-1);
+        } 
     }
+    printf("Finished transmission of file\n");
 
-
-    rLength = recv(mysocket, received, bufSize, 0);
-    received[rLength] = '\0';
-
-    if (strcmp(received,confirm) == 0) {
-        printf("File transmitted successfully\n");
-    }
-    /* Put error check here*/
     fclose(fptr);
     free(received);
     free(readBuffer);

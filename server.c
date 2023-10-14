@@ -14,9 +14,10 @@ int main(int argc, char *argv[])
     int len;
     unsigned long fileSize;
     unsigned long chunks;
-    int recievingFlag = 0;
+    int receivingFlag = 0;
     char * confirm = CONFIRMATION_MSG;
     FILE * fptr;
+    void *addr;
     //Code taken from TCPserver.c
     struct sockaddr_in dest; // socket info about the machine connecting to us
     struct sigaction signaler;
@@ -66,25 +67,10 @@ int main(int argc, char *argv[])
 
     //Code taken from TCPserver.c
     if (bind(mysocket, res->ai_addr, res->ai_addrlen) != 0){
-		fprintf(stderr,"Unable to open TCP socket on:\n");
-        for(p = res;p != NULL; p = p->ai_next) {
-            void *addr;
-            char *ipver;
-            // get the pointer to the address itself,
-            // different fields in IPv4 and IPv6:
-            if (p->ai_family == AF_INET) { // IPv4
-                struct sockaddr_in *ipv4 = (struct sockaddr_in *)p->ai_addr;
-                addr = &(ipv4->sin_addr);
-                ipver = "IPv4";
-            } else { // IPv6
-                struct sockaddr_in6 *ipv6 = (struct sockaddr_in6 *)p->ai_addr;
-                addr = &(ipv6->sin6_addr);
-                ipver = "IPv6";
-            }
-            // convert the IP to a string and print it:
-            inet_ntop(p->ai_family, addr, ipstr, sizeof ipstr);
-            fprintf(stderr,"  %s: %s\n", ipver, ipstr);
-        }
+        struct sockaddr_in *ipv4 = (struct sockaddr_in *)res->ai_addr;
+        addr = &(ipv4->sin_addr);
+        inet_ntop(res->ai_family, addr, ipstr, sizeof ipstr);
+        fprintf(stderr,"Unable to open TCP socket on: at %s:%s\n", ipstr,port);
 		fprintf(stderr,"%s\n", strerror(errno));
         freeaddrinfo(res);
 		close(mysocket);
@@ -92,26 +78,10 @@ int main(int argc, char *argv[])
 	}
     
     //Code from beej's for printing IP
-    printf("Server is running at \n");
-    for(p = res;p != NULL; p = p->ai_next) {
-		void *addr;
-		char *ipver;
-		// get the pointer to the address itself,
-		// different fields in IPv4 and IPv6:
-		if (p->ai_family == AF_INET) { // IPv4
-			struct sockaddr_in *ipv4 = (struct sockaddr_in *)p->ai_addr;
-			addr = &(ipv4->sin_addr);
-			ipver = "IPv4";
-		} else { // IPv6
-			struct sockaddr_in6 *ipv6 = (struct sockaddr_in6 *)p->ai_addr;
-			addr = &(ipv6->sin6_addr);
-			ipver = "IPv6";
-		}
-		// convert the IP to a string and print it:
-		inet_ntop(p->ai_family, addr, ipstr, sizeof ipstr);
-		printf("  %s: %s:\n", ipver, ipstr);
-	}
-    printf("On port %s\n",port);
+    struct sockaddr_in *ipv4 = (struct sockaddr_in *)res->ai_addr;
+    addr = &(ipv4->sin_addr);
+    inet_ntop(res->ai_family, addr, ipstr, sizeof ipstr);
+    printf("Server is running at %s:%s\n", ipstr,port);
 
     if (listen(mysocket, 0) == -1) {
         fprintf(stderr,"Error: Listen failed: %s\n", strerror(errno));
@@ -121,14 +91,13 @@ int main(int argc, char *argv[])
     }
     consocket = accept(mysocket, (struct sockaddr *)&dest, &socksize);
 
-
     char * textReceived = malloc(sizeof(char)*(bufSize+1));
     char * fileName = malloc(sizeof(char)*(bufSize+1));
 
     //Code taken from TCPserver.c
     while(consocket)
 	{
-		printf("Incoming connection from %s on port %d\n", inet_ntoa(dest.sin_addr), ntohs(dest.sin_port));
+		printf("\nIncoming connection from %s on port %d\n", inet_ntoa(dest.sin_addr), ntohs(dest.sin_port));
 		
 		// Receive data from the client
 		len = recv(consocket, textReceived, bufSize, 0);
@@ -164,15 +133,16 @@ int main(int argc, char *argv[])
             exit(-1);
         }
         chunks = 0;
-        recievingFlag = 0;
-        while (recievingFlag == 0) {
+        receivingFlag = 0;
+
+        while (receivingFlag == 0) {
             len = recv(consocket, textReceived, bufSize, 0);
             if (len > 0 && textReceived != NULL) {
                 textReceived[len] = '\0';
                 fputs(textReceived,fptr);
                 chunks++;
             } else if (len == 0) {
-                recievingFlag = 1;
+                receivingFlag = 1;
             } else if (len == -1) {
                 fprintf(stderr,"Error: File name transmission failed: %s\n",strerror(errno));
                 free(fileName);
@@ -181,7 +151,7 @@ int main(int argc, char *argv[])
                 close(consocket);
                 close(mysocket);
                 fclose(fptr);
-                recievingFlag = 0;
+                receivingFlag = 0;
                 exit(-1); 
             }
         }
@@ -195,10 +165,8 @@ int main(int argc, char *argv[])
         fseek(fptr, 0, SEEK_SET);
         fclose(fptr);
         fptr = NULL;
-        printf("Recieved %s from %s on port %d\n",fileName,inet_ntoa(dest.sin_addr), ntohs(dest.sin_port));
+        printf("Received %s from %s on port %d\n",fileName,inet_ntoa(dest.sin_addr), ntohs(dest.sin_port));
         printf("%s contains %lu bytes, received in %lu chunks\n",fileName,fileSize,chunks);
-		//Send data to client
-		send(consocket, confirm, strlen(confirm), 0); 
 		
 		close(consocket);
 		consocket = accept(mysocket, (struct sockaddr *)&dest, &socksize);
